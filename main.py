@@ -15,13 +15,30 @@ class MapScreen(CScreen):
 
         # Starts GPS
         if platform == "android":
-            gps.configure(on_location=self.update_map_pos)
-            gps.start()
+            self.CALL_NATIVE_ANDROID_LOCATION_REQUEST()
 
         else:
             # Windows fallback
             self.current_lat = 0
             self.current_lon = 0
+
+    def CALL_NATIVE_ANDROID_LOCATION_REQUEST(self):
+        from android.permissions import Permission, request_permissions
+
+        def callback(permissions, results):
+            # This runs AFTER the user clicks "Allow" or "Deny"
+            if all(results):
+                print("Permissions granted! Starting GPS...")
+                gps.configure(on_location=self.update_map_pos)
+                gps.start()
+            else:
+                print("Permissions denied by user.")
+
+        # Request both fine (GPS) and coarse (Wifi/Cell) location natively
+        request_permissions([
+            Permission.ACCESS_FINE_LOCATION, 
+            Permission.ACCESS_COARSE_LOCATION
+        ], callback)
 
     def update_map_pos(self, **kwargs):
         # Update the pos on the map (if location changes)
@@ -29,7 +46,7 @@ class MapScreen(CScreen):
         # Get the current coordinates
         self.current_lat = kwargs.get('lat')
         self.current_lon = kwargs.get('lon')
-        
+
         if self.current_lat and self.current_lon:
             self.mapview.lat = self.current_lat
             self.mapview.lon = self.current_lon
